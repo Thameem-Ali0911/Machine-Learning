@@ -1,0 +1,86 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report
+from sklearn.tree import plot_tree
+import matplotlib.pyplot as plt
+
+# Column Names
+columns = [
+    "age", "workclass", "fnlwgt", "education", "education-num",
+    "marital-status", "occupation", "relationship", "race", "sex",
+    "capital-gain", "capital-loss", "hours-per-week",
+    "native-country", "income"
+]
+
+# Load Dataset
+df = pd.read_csv("adult-all.csv", header=None, names=columns)
+
+# Handle Missing Values
+df.replace(" ?", np.nan, inplace=True)
+df.dropna(inplace=True)
+
+# Encode Categorical Features
+label_encoders = {}
+for column in df.columns:
+    if df[column].dtype == "object":
+        le = LabelEncoder()
+        df[column] = le.fit_transform(df[column])
+        label_encoders[column] = le
+
+# Features and Target
+X = df.drop("income", axis=1)
+y = df["income"]
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Scale Features for Logistic Regression
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Logistic Regression
+lr_model = LogisticRegression(max_iter=2000)
+lr_model.fit(X_train_scaled, y_train)
+lr_pred = lr_model.predict(X_test_scaled)
+
+# Decision Tree
+dt_model = DecisionTreeClassifier(criterion="entropy", max_depth=5, random_state=42)
+dt_model.fit(X_train, y_train)
+dt_pred = dt_model.predict(X_test)
+
+# Evaluation Function
+def evaluate(y_true, y_pred, model_name):
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred)
+    recall = recall_score(y_true, y_pred)
+    f1 = f1_score(y_true, y_pred)
+    print("\n", model_name)
+    print("-" * 30)
+    print("Accuracy :", accuracy)
+    print("Precision:", precision)
+    print("Recall :", recall)
+    print("F1 Score :", f1)
+
+evaluate(y_test, lr_pred, "Logistic Regression")   # stray print() removed
+evaluate(y_test, dt_pred, "Decision Tree")
+
+print("\nClassification Report - Logistic Regression")
+print(classification_report(y_test, lr_pred))
+print("\nClassification Report - Decision Tree")
+print(classification_report(y_test, dt_pred))
+
+# Decision Tree Visualization
+plt.figure(figsize=(18, 10))
+plot_tree(dt_model, feature_names=X.columns, filled=True, fontsize=8)
+plt.show()
